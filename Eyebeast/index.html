@@ -1,0 +1,365 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Eyebeast — Real-Time Eye Health Monitor</title>
+  <meta name="description"
+    content="Privacy-first, local eye health dashboard. Tracks blink rate and eye strain risk in real time using your webcam — no data ever leaves your device." />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link
+    href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap"
+    rel="stylesheet" />
+  <link rel="stylesheet" href="style.css" />
+  <link rel="stylesheet" href="welcome.css" />
+
+  <!-- MediaPipe via CDN -->
+  <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js" crossorigin="anonymous"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@mediapipe/drawing_utils/drawing_utils.js" crossorigin="anonymous"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh/face_mesh.js" crossorigin="anonymous"></script>
+</head>
+
+<body>
+
+  <!-- Background particles -->
+  <div class="bg-grid" aria-hidden="true"></div>
+  <div class="orb orb-1" aria-hidden="true"></div>
+  <div class="orb orb-2" aria-hidden="true"></div>
+
+  <div class="app-shell">
+
+    <!-- ── Header ── -->
+    <header class="app-header">
+      <div class="brand">
+        <span class="brand-icon">👁</span>
+        <span class="brand-name">Eyebeast</span>
+        <span class="brand-tag">Eye Health Monitor</span>
+      </div>
+      <div class="header-meta">
+        <div class="privacy-badge">
+          <span class="privacy-dot"></span>
+          100% Private — No data leaves this device
+        </div>
+        <div class="session-block">
+          <span class="session-label">Session</span>
+          <span class="mono" id="sessionTimer">00:00:00</span>
+        </div>
+        <a href="exercises.html" class="ex-nav-pill">💪 Eye Exercises</a>
+        <button class="stop-btn" id="stopSessionBtn" aria-label="Stop session">
+          <span class="stop-icon">⏹</span> Stop Session
+        </button>
+      </div>
+    </header>
+
+    <!-- ── Main Layout ── -->
+    <main class="main-grid">
+
+      <!-- LEFT COLUMN ──────────────────────────── -->
+      <aside class="left-col">
+
+        <!-- Webcam Feed -->
+        <div class="cam-card" id="camCard">
+          <div class="cam-label">
+            <span class="live-dot" id="liveDot"></span>
+            <span id="camStatus">Initializing…</span>
+          </div>
+          <div class="cam-frame">
+            <video id="webcamVideo" playsinline autoplay muted></video>
+            <canvas id="overlayCanvas"></canvas>
+            <div class="cam-overlay-text" id="camOverlayText">
+              <div class="spinner"></div>
+              <p>Requesting camera…</p>
+            </div>
+          </div>
+          <!-- Current EAR readout -->
+          <div class="ear-strip">
+            <span>Eye Aspect Ratio (EAR)</span>
+            <span class="mono ear-value" id="earValue">—</span>
+          </div>
+        </div>
+
+        <!-- Blink State Indicator -->
+        <div class="blink-state-card">
+          <div class="blink-icon" id="blinkIcon">😐</div>
+          <div class="blink-state-label" id="blinkStateLabel">Waiting for face…</div>
+          <div class="blink-count-row">
+            <span>Total Blinks</span>
+            <span class="mono" id="totalBlinks">0</span>
+          </div>
+        </div>
+
+      </aside>
+
+      <!-- RIGHT COLUMN ─────────────────────────── -->
+      <section class="right-col">
+
+        <!-- ── Row 1: Primary Metrics ── -->
+        <div class="metrics-row">
+
+          <!-- Blinks Per Minute -->
+          <div class="metric-card primary" id="bpmCard">
+            <div class="metric-icon">💓</div>
+            <div class="metric-body">
+              <div class="metric-value mono" id="bpmValue">—</div>
+              <div class="metric-label">Blinks / Minute</div>
+              <div class="metric-sub">60-second rolling window</div>
+            </div>
+            <div class="metric-badge" id="bpmBadge">—</div>
+          </div>
+
+          <!-- Eye Strain Risk -->
+          <div class="metric-card risk-card" id="riskCard">
+            <div class="metric-icon" id="riskIcon">🛡️</div>
+            <div class="metric-body">
+              <div class="metric-value risk-value" id="riskValue">—</div>
+              <div class="metric-label">Eye Strain Risk</div>
+              <div class="metric-sub" id="riskSub">Calibrating…</div>
+            </div>
+            <!-- Gauge -->
+            <div class="risk-gauge-wrap">
+              <div class="risk-gauge-track">
+                <div class="risk-gauge-fill" id="riskGaugeFill"></div>
+              </div>
+              <div class="risk-gauge-labels">
+                <span>Low</span><span>Med</span><span>High</span>
+              </div>
+            </div>
+          </div>
+
+        </div>
+
+        <!-- ── Row 2: Secondary Metrics ── -->
+        <div class="metrics-row secondary-row">
+
+          <!-- Average EAR -->
+          <div class="metric-card small-card">
+            <div class="small-card-header">
+              <span class="small-icon">📐</span>
+              <span>Avg EAR (10 s)</span>
+            </div>
+            <div class="small-value mono" id="avgEarValue">—</div>
+            <div class="small-sub">Eye openness index</div>
+          </div>
+
+          <!-- Blink Interval -->
+          <div class="metric-card small-card">
+            <div class="small-card-header">
+              <span class="small-icon">⏱️</span>
+              <span>Last Blink Gap</span>
+            </div>
+            <div class="small-value mono" id="binkGapValue">—</div>
+            <div class="small-sub">Seconds between blinks</div>
+          </div>
+
+          <!-- 20-20-20 Countdown -->
+          <div class="metric-card small-card" id="ruleCard">
+            <div class="small-card-header">
+              <span class="small-icon">🕐</span>
+              <span>20-20-20 Break</span>
+            </div>
+            <div class="small-value mono" id="breakTimer">20:00</div>
+            <div class="small-sub">Next recommended break</div>
+          </div>
+
+        </div>
+
+        <!-- ── Alert Banner ── -->
+        <div class="alert-banner hidden" id="alertBanner">
+          <span class="alert-icon">⚠️</span>
+          <div class="alert-text">
+            <strong>Low Blink Rate Detected</strong>
+            <span>Your blink rate has dropped below 15 BPM. Take a break and look away from the screen.</span>
+          </div>
+          <button class="alert-dismiss" id="alertDismiss" aria-label="Dismiss alert">✕</button>
+        </div>
+
+        <!-- ── Break Alert Banner ── -->
+        <div class="alert-banner break-alert hidden" id="breakAlertBanner">
+          <span class="alert-icon">☀️</span>
+          <div class="alert-text">
+            <strong>20-20-20 Break Time!</strong>
+            <span>Look at something 20 feet away for 20 seconds to relax your eyes.</span>
+          </div>
+          <button class="alert-dismiss" id="breakAlertDismiss" aria-label="Dismiss break alert">✕</button>
+        </div>
+
+        <!-- ── Clinical Recommendations ── -->
+        <div class="recs-section">
+          <h2 class="recs-title">Clinical Recommendations</h2>
+          <div class="recs-grid">
+
+            <div class="rec-card">
+              <div class="rec-number">20<span>min</span></div>
+              <div class="rec-body">
+                <h3>The 20-20-20 Rule</h3>
+                <p>Every <strong>20 minutes</strong>, look at an object <strong>20 feet away</strong> for <strong>20
+                    seconds</strong> to relax your ciliary muscle and reduce digital eye strain.</p>
+              </div>
+            </div>
+
+            <div class="rec-card">
+              <div class="rec-number">20<span>in</span></div>
+              <div class="rec-body">
+                <h3>Optimal Monitor Distance</h3>
+                <p>Keep your monitor <strong>20–26 inches</strong> (50–65 cm) from your eyes. The centre of the screen
+                  should be <strong>10–15°</strong> below eye level.</p>
+              </div>
+            </div>
+
+            <div class="rec-card">
+              <div class="rec-number">15<span>bpm</span></div>
+              <div class="rec-body">
+                <h3>Normal Blink Rate</h3>
+                <p>A healthy blink rate is <strong>15–20 blinks per minute</strong>. Screen use can reduce this to 5–7
+                  BPM, causing dryness, fatigue, and blurred vision.</p>
+              </div>
+            </div>
+
+          </div>
+        </div>
+
+      </section>
+    </main>
+
+    <footer class="app-footer">
+      <span>Eyebeast v1.0 — All processing is local. Your webcam feed is never transmitted.</span>
+      <span class="footer-credit">Created by <strong>Adithya</strong></span>
+    </footer>
+
+
+  </div><!-- /.app-shell -->
+
+  <!-- ── Session Summary Modal ── -->
+  <div class="modal-backdrop hidden" id="summaryModal" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
+    <div class="modal-card">
+
+      <div class="modal-header">
+        <div class="modal-title-group">
+          <span class="modal-brand-icon">👁</span>
+          <h2 class="modal-title" id="modalTitle">Session Complete</h2>
+        </div>
+        <div class="modal-session-duration">
+          <span class="modal-duration-label">Duration</span>
+          <span class="mono modal-duration-value" id="summaryDuration">—</span>
+        </div>
+      </div>
+
+      <div class="modal-rating-banner" id="summaryRatingBanner">
+        <span id="summaryRatingIcon">🛡️</span>
+        <span id="summaryRatingText">Eye Health Rating</span>
+      </div>
+
+      <div class="modal-metrics-grid">
+        <div class="modal-metric">
+          <div class="modal-metric-value mono" id="summaryTotalBlinks">—</div>
+          <div class="modal-metric-label">Total Blinks</div>
+        </div>
+        <div class="modal-metric">
+          <div class="modal-metric-value mono" id="summaryAvgBpm">—</div>
+          <div class="modal-metric-label">Avg Blinks / Min</div>
+        </div>
+        <div class="modal-metric">
+          <div class="modal-metric-value mono" id="summaryPeakBpm">—</div>
+          <div class="modal-metric-label">Peak BPM</div>
+        </div>
+        <div class="modal-metric">
+          <div class="modal-metric-value mono" id="summaryAvgEar">—</div>
+          <div class="modal-metric-label">Avg EAR</div>
+        </div>
+        <div class="modal-metric">
+          <div class="modal-metric-value mono" id="summaryLowBpmEvents">—</div>
+          <div class="modal-metric-label">Low-Rate Events</div>
+        </div>
+        <div class="modal-metric">
+          <div class="modal-metric-value mono" id="summaryBreaksTaken">—</div>
+          <div class="modal-metric-label">Breaks Taken</div>
+        </div>
+      </div>
+
+      <div class="modal-insight" id="summaryInsight"></div>
+
+      <div class="modal-timeline">
+        <div class="modal-timeline-label">Blink Activity Timeline</div>
+        <canvas id="timelineCanvas" class="timeline-canvas"></canvas>
+      </div>
+
+      <div class="modal-actions">
+        <button class="modal-btn secondary" id="summaryClose">Close</button>
+        <button class="modal-btn primary" id="summaryNewSession">Start New Session</button>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- ── Welcome / Onboarding Modal ── -->
+  <div class="welcome-backdrop" id="welcomeModal" role="dialog" aria-modal="true" aria-labelledby="welcomeTitle">
+    <div class="welcome-card">
+
+      <div class="welcome-hero">
+        <div class="welcome-logo">👁</div>
+        <h1 class="welcome-title" id="welcomeTitle">Welcome to <span class="welcome-brand">Eyebeast</span></h1>
+        <p class="welcome-tagline">Your private, real-time eye health companion</p>
+      </div>
+
+      <div class="welcome-steps">
+
+        <div class="welcome-step">
+          <div class="step-num">1</div>
+          <div class="step-body">
+            <h3>Allow Camera Access</h3>
+            <p>Click <strong>Allow</strong> when your browser asks for webcam permission. The camera feed never leaves
+              your device — all processing is 100% local.</p>
+          </div>
+        </div>
+
+        <div class="welcome-step">
+          <div class="step-num">2</div>
+          <div class="step-body">
+            <h3>Position Your Face</h3>
+            <p>Sit <strong>50–70 cm</strong> from your screen. Keep your face centred in the small camera preview. Good
+              lighting helps — avoid strong backlight.</p>
+          </div>
+        </div>
+
+        <div class="welcome-step">
+          <div class="step-num">3</div>
+          <div class="step-body">
+            <h3>Watch Your Metrics</h3>
+            <p>Eyebeast tracks your <strong>Blink Rate (BPM)</strong> and <strong>Eye Strain Risk</strong> in real time.
+              A healthy blink rate is 15–20 BPM. Below 15 BPM is when eye strain sets in.</p>
+          </div>
+        </div>
+
+        <div class="welcome-step">
+          <div class="step-num">4</div>
+          <div class="step-body">
+            <h3>Take Breaks & Do Exercises</h3>
+            <p>A <strong>20-20-20 break reminder</strong> fires every 20 minutes. Visit the <strong>💪 Eye
+                Exercises</strong> page for guided exercises to reduce strain.</p>
+          </div>
+        </div>
+
+      </div>
+
+      <div class="welcome-privacy">
+        <span class="welcome-privacy-dot"></span>
+        No data is stored, transmitted, or shared. Everything runs in your browser.
+      </div>
+
+      <div class="welcome-actions">
+        <label class="welcome-skip-label">
+          <input type="checkbox" id="welcomeDontShow"> Don't show again
+        </label>
+        <button class="welcome-btn" id="welcomeStart">Get Started →</button>
+      </div>
+
+    </div>
+  </div>
+
+  <script src="app.js"></script>
+
+</body>
+
+</html>

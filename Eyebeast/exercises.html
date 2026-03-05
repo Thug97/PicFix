@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Eyebeast — Eye Exercise Program</title>
+    <meta name="description"
+        content="Clinical evidence-based eye exercises for digital eye strain relief. Private and local." />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+        href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap"
+        rel="stylesheet" />
+    <link rel="stylesheet" href="style.css" />
+</head>
+
+<body>
+
+    <div class="bg-grid" aria-hidden="true"></div>
+    <div class="orb orb-1" aria-hidden="true"></div>
+    <div class="orb orb-2" aria-hidden="true"></div>
+
+    <div class="app-shell">
+
+        <!-- ── Header ── -->
+        <header class="app-header">
+            <div class="brand">
+                <span class="brand-icon">👁</span>
+                <span class="brand-name">Eyebeast</span>
+                <span class="brand-tag">Eye Exercise Program</span>
+            </div>
+            <nav class="page-nav">
+                <a href="index.html" class="page-nav-link">← Dashboard</a>
+                <a href="exercises.html" class="page-nav-link active">Exercises</a>
+            </nav>
+            <button class="ex-reset-btn" id="exResetBtn">Reset Daily Progress</button>
+        </header>
+
+        <!-- ── Stats Bar ── -->
+        <div class="ex-stats-bar">
+            <div class="ex-stat-card">
+                <div class="ex-stat-value mono" id="exCompleted">0</div>
+                <div class="ex-stat-label">Completed Today</div>
+            </div>
+            <div class="ex-stat-card accent-stat">
+                <div class="ex-stat-value mono" id="exProgress">0%</div>
+                <div class="ex-stat-label">Daily Progress</div>
+            </div>
+            <div class="ex-stat-card green-stat">
+                <div class="ex-stat-value mono" id="exDuration">0s</div>
+                <div class="ex-stat-label">Total Duration</div>
+            </div>
+        </div>
+
+        <!-- ── Page Title ── -->
+        <div class="ex-page-heading">
+            <h1 class="ex-page-title">Eye Exercise Program</h1>
+            <p class="ex-page-sub">Clinical evidence-based exercises for digital eye strain relief. Complete all 6
+                exercises daily for optimal eye health.</p>
+        </div>
+
+        <!-- ── Exercise Cards Grid ── -->
+        <div class="ex-grid" id="exGrid">
+            <!-- Rendered by JS -->
+        </div>
+
+        <footer class="app-footer">
+            <span>Eyebeast v1.0 — All processing is local. Your webcam feed is never transmitted.</span>
+            <span class="footer-credit">Created by <strong>Adithya</strong></span>
+        </footer>
+
+    </div><!-- /.app-shell -->
+
+    <!-- ── Exercise Timer Modal ── -->
+    <div class="ex-modal-backdrop hidden" id="exModal">
+        <div class="ex-modal-card">
+            <div class="ex-modal-icon" id="exModalIcon">👁️</div>
+            <h3 class="ex-modal-name" id="exModalName">Exercise</h3>
+            <p class="ex-modal-desc" id="exModalDesc"></p>
+            <div class="ex-timer-ring-wrap">
+                <svg class="ex-timer-ring" viewBox="0 0 120 120">
+                    <circle class="ex-ring-track" cx="60" cy="60" r="50" />
+                    <circle class="ex-ring-fill" id="exRingFill" cx="60" cy="60" r="50" />
+                </svg>
+                <div class="ex-timer-center">
+                    <div class="ex-timer-count mono" id="exTimerCount">0</div>
+                    <div class="ex-timer-label">seconds</div>
+                </div>
+            </div>
+            <p class="ex-modal-instruction" id="exModalInstruction"></p>
+            <div class="ex-modal-actions">
+                <button class="ex-modal-btn secondary" id="exModalCancel">Cancel</button>
+                <button class="ex-modal-btn primary" id="exModalComplete" style="display:none">✓ Mark Complete</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="exercises.js"></script>
+</body>
+
+</html>
